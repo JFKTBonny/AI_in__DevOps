@@ -1,0 +1,27 @@
+=== CI Job: unit-tests ===
+Commit: 4f2c9ab
+Runner: ubuntu-latest
+Python: 3.12
+Step: Install dependencies
+  pip install -r requirements.txt
+Result: success
+Step: Run unit tests
+  pytest -q
+============================= test session starts ==============================
+collected 18 items
+tests/test_checkout.py .......F
+=================================== FAILURES ===================================
+_______________________ test_rejects_expired_coupon ___________________________
+
+    def test_rejects_expired_coupon():
+        result = apply_coupon("SAVE10", expired=True)
+>       assert result.error_code == "COUPON_EXPIRED"
+E       AssertionError: assert 'INVALID_COUPON' == 'COUPON_EXPIRED'
+
+tests/test_checkout.py:84: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_checkout.py::test_rejects_expired_coupon - AssertionError
+========================= 1 failed, 17 passed ===============================
+Step: Run unit tests
+Result: failed (exit code 1)
+=== End CI Job ===

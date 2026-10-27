@@ -1,0 +1,162 @@
+PROMPT ENGINEERING FOR DEVOPS
+=============================
+
+What prompt engineering is
+--------------------------
+A prompt is the instruction and context sent to a language model. Prompt
+engineering means shaping that input so the model can produce a relevant,
+usable response. Clear prompts can reduce ambiguity, but they do not guarantee
+correctness. Treat model output as a draft to review and verify.
+
+A useful prompt often specifies:
+- Goal: what the model should do.
+- Context: relevant environment, inputs, and what has already been tried.
+- Constraints: tools, versions, permissions, safety limits, and exclusions.
+- Output format: for example, a short explanation, numbered checklist, or
+  code block.
+- Verification: how to check that the answer is correct and safe.
+
+For operational work, say whether the response should be read-only or allowed
+to make changes. Avoid sharing credentials, tokens, private keys, or
+unredacted sensitive logs.
+
+
+1. Zero-shot prompting
+----------------------
+Zero-shot prompting gives the model a task without examples. The model uses
+the instruction and its general learned capabilities to respond.
+
+Example: ask for a log-backup script. A stronger prompt specifies the source
+and destination paths, expected operating system, how to handle missing
+directories and errors, whether existing files may be overwritten, and a
+dry-run mode. Ask for a script that reports what it would do before making
+changes.
+
+Example: ask what `kubectl get pods` does. State whether you mean the current
+namespace or all namespaces. The command lists pods in the selected scope;
+pod statuses can include many values, not only Running and Pending. Its
+output commonly includes name, readiness, status, restart count, and age.
+
+Use zero-shot when the task is straightforward and the desired output can be
+described clearly. If the response misses a requirement, add that requirement
+to the prompt rather than assuming the model inferred it.
+
+
+2. Few-shot prompting
+---------------------
+Few-shot prompting includes a small number of input/output examples. The
+examples demonstrate the pattern, style, or format wanted; they are not
+automatically verified facts. Use examples that are correct, representative,
+and consistent with one another.
+
+For log cleanup, examples can show how to create a log and archive logs, then
+ask for a cleanup script. Add explicit safeguards: target only regular files
+in the specified directory, show a dry-run preview by default, require a
+separate opt-in to delete, and state the age rule. Review the result carefully
+before using it. A command that deletes files can cause data loss.
+
+Few-shot prompts are useful when format or conventions matter. Too many
+examples can consume context and can teach the model irrelevant or conflicting
+patterns.
+
+
+3. Multi-shot prompting
+-----------------------
+Multi-shot prompting supplies several examples to establish a pattern before
+asking for a related result. In practice, "few-shot" and "multi-shot" are
+often used interchangeably; the important distinction is that examples are
+included.
+
+For Kubernetes, examples such as creating, listing, and describing a
+deployment establish the command-line context. The request can then ask for a
+command to scale a named deployment. Include namespace and target details if
+they matter, and ask the model to state assumptions.
+
+Scaling changes a running workload. Treat the generated command as a proposal:
+check the current context and namespace, confirm the deployment and desired
+replica count, and follow the team's change process before applying it.
+
+
+4. Step-by-step troubleshooting requests
+----------------------------------------
+For complex questions, ask for an ordered diagnostic checklist. Request
+observable checks, expected evidence, and what each result would imply.
+This produces an auditable explanation without requiring private internal
+reasoning. A model's step-by-step answer is still a hypothesis; confirm it
+with actual logs, events, metrics, and configuration.
+
+Shell script permission error:
+- Identify the exact failing command and path.
+- Inspect permissions and ownership of both source and destination.
+- Check mount options, ACLs, and applicable security controls if needed.
+- Recommend the least-privilege fix; do not default to running everything as
+  root or changing security labels.
+- Separate diagnosis from any command that changes permissions.
+
+Kubernetes CrashLoopBackOff:
+- Start with read-only checks such as `kubectl get pod`, `kubectl describe
+  pod`, and `kubectl logs`; use `--previous` when a container has restarted.
+- Check events, exit code, image, command, probes, resource limits, mounted
+  configuration, and recent changes.
+- Ask for namespace and container name when they are not known.
+- Suggest changes only after connecting them to observed evidence. Keep
+  mutating commands, such as changing an image or scaling a deployment, out
+  of the initial diagnostic steps.
+
+Ask for concise findings and next checks, not hidden chain-of-thought. A
+useful answer can show its evidence and conclusion without exposing private
+reasoning traces.
+
+
+5. Iteration and evaluation
+---------------------------
+Prompting is often iterative:
+1. State the task and constraints.
+2. Review the answer against those requirements.
+3. Add missing context or correct a mistaken assumption.
+4. Request a revised answer in a defined format.
+5. Verify code, commands, and claims independently.
+
+For generated code, inspect it before execution, test it on representative
+non-production inputs, and use version control and review. For commands,
+understand their effects and prefer read-only checks or dry runs first. For
+Kubernetes, verify the active context and namespace before any change.
+
+Do not treat a more detailed prompt as a substitute for verification. Models
+can produce plausible but incorrect explanations and unsafe commands.
+
+
+6. Running the Python examples with Groq
+----------------------------------------
+The example scripts in this directory send prompts to the Groq Chat
+Completions API and print the returned text. They do not execute generated
+shell scripts or Kubernetes commands.
+
+Python 3.9 or newer is recommended. The examples use only Python's standard
+library; no package installation is required.
+
+Set an API key in the environment (do not put it in source code):
+
+  export GROQ_API_KEY="your-api-key"
+
+Run an example from this directory, for example:
+
+  python3 zero_shot_backup_logs.py
+
+The default model is `llama-3.3-70b-versatile`. To select another model
+available to your Groq account, set `GROQ_MODEL`:
+
+  export GROQ_MODEL="your-available-model"
+
+API availability, model names, rate limits, and account access can change.
+Consult Groq's current API documentation if a request fails. Do not submit
+secrets, customer data, or confidential logs unless permitted by your
+organization.
+
+
+Key takeaway
+------------
+Specific goals, relevant context, explicit constraints, and a clear output
+format make prompts more useful. Examples can guide style and structure.
+Troubleshooting prompts should request evidence-based checks. Always review
+generated operational instructions before using them.

@@ -1,0 +1,189 @@
+INTRODUCTION TO AI FOR DEVOPS
+=============================
+
+Purpose
+-------
+These notes explain how traditional AI, generative AI, and large language
+models (LLMs) can be used in DevOps. The examples are illustrative: an AI
+system can support an engineer's judgment, but it should not be treated as
+automatically correct or as a replacement for operational safeguards.
+
+
+1. What does AI mean in DevOps?
+-------------------------------
+DevOps teams operate software and infrastructure while trying to deliver
+changes reliably. Their work produces and depends on many kinds of
+information: metrics, logs, traces, configuration files, deployment history,
+runbooks, incident reports, and alerts.
+
+AI describes a broad set of computational approaches that perform tasks such
+as finding patterns, classifying information, making predictions, or
+generating content. In DevOps, these methods can help people make sense of
+operational data, reduce repetitive work, and investigate incidents. The
+useful method depends on the task and the quality of the available data.
+
+Examples:
+- Predict whether a service is likely to breach a latency objective.
+- Group similar alerts so that responders can focus on one underlying issue.
+- Summarize a large set of logs during an incident.
+- Draft a deployment manifest from a clearly specified requirement.
+
+AI output is a recommendation or prediction, not proof. Engineers should
+validate it against system state, test results, and operational policy.
+
+
+2. Traditional and predictive AI
+---------------------------------
+In these notes, "traditional AI" refers mainly to machine-learning and
+rule-based methods that classify, score, detect, or predict. It is a broad
+informal label, not one specific algorithm.
+
+Some systems use explicit rules, such as "alert when CPU usage is above 90%
+for five minutes." Other systems learn patterns from historical examples or
+from a baseline of normal behavior. Machine-learning methods can work with
+structured data such as time-series metrics, but they can also process text,
+images, and other data when designed for those inputs. They do not all require
+labeled data.
+
+Common DevOps applications:
+- Classification: label an event as likely to be an error, warning, or
+  routine event.
+- Forecasting: estimate future resource use from measurements over time.
+- Anomaly detection: flag observations that differ from an expected pattern.
+- Clustering: group similar incidents, alerts, or log messages.
+
+Example: detecting a possible service incident
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Suppose a service normally has low, steady request latency. A monitoring
+system observes that latency has risen sharply while error counts and CPU
+usage have also increased. A rule-based alert could fire when a threshold is
+crossed. A predictive model could estimate the likelihood of an impending
+service-level objective breach from recent measurements.
+
+The alert is a signal to investigate, not a diagnosis. A responder might
+check recent deployments, traffic changes, dependency health, and resource
+pressure before deciding what action to take.
+
+Strengths:
+- Can continuously process large volumes of measurements.
+- Can give consistent results for well-defined tasks.
+- Can identify trends or unusual behavior that are hard to spot manually.
+
+Limitations:
+- Thresholds and learned patterns can produce false alarms or miss real
+  problems.
+- A model may perform poorly when the service, workload, or data changes.
+- Historical data may reflect past incidents or operational bias.
+- A prediction usually does not explain the full cause of an incident.
+- Poorly chosen metrics or incomplete data lead to unreliable results.
+
+
+3. Generative AI
+----------------
+Generative AI creates new content in response to input. A text-based
+generative model can draft or transform natural language, code, configuration,
+and summaries. Large language models are one kind of generative AI.
+
+In a DevOps workflow, a model might:
+- Summarize logs or an incident timeline supplied in a prompt.
+- Explain a configuration file or command.
+- Draft a runbook, shell script, Dockerfile, or infrastructure manifest.
+- Turn an incident discussion into a concise status update.
+
+Example: investigating a Kubernetes pod
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+An engineer supplies relevant pod events, container logs, resource limits,
+and recent change details. A generative model may summarize likely causes,
+such as a failed health check, an unavailable image, or memory exhaustion, and
+suggest checks to distinguish among them.
+
+The quality of the result depends on the information supplied. A model cannot
+inspect a cluster unless it has been connected to tools that provide that
+access. Even with tool access, it may miss important context or suggest an
+incorrect fix. Check its claims against Kubernetes events, metrics, logs, and
+the actual configuration.
+
+Strengths:
+- Can work with natural-language questions and unstructured text.
+- Can produce readable explanations and adapt the response to a given
+  context.
+- Can help create a first draft quickly.
+
+Limitations:
+- It may produce plausible-sounding but false statements, commands, or
+  configuration (often called hallucinations).
+- It may misunderstand incomplete or ambiguous instructions.
+- Its answer may omit important operational constraints.
+- Generated code can contain bugs, insecure settings, or destructive
+  commands.
+- Sending logs, configuration, or incident data to an external service may
+  expose sensitive information; follow organizational data policies.
+
+Use generated commands and configuration only after review and testing.
+Prefer read-only investigation before actions that change production systems.
+Require explicit human approval and appropriate access controls for
+high-impact changes.
+
+
+4. Traditional AI compared with generative AI
+---------------------------------------------
+These categories can overlap: a product may use prediction, rules, and
+generative models together. The table describes common differences, not
+absolute rules.
+
+Dimension              Predictive / rule-based AI       Generative AI
+---------------------  --------------------------------  -------------------------------
+Typical goal           Classify, score, detect, predict  Create or transform content
+Typical input          Metrics, events, labeled examples Logs, documents, prompts, code
+Typical output         Score, class, alert, forecast     Text, code, summary, suggestion
+Example                Flag unusual error rate           Explain an incident timeline
+Main concern           Drift, false alerts, data quality Incorrect or unsafe generated output
+
+Both approaches depend on relevant input, careful evaluation, and monitoring.
+Neither should be assumed accurate simply because it uses AI.
+
+
+5. Large language models (LLMs)
+-------------------------------
+An LLM is a model trained on large amounts of text to process and generate
+language. Many current LLMs use transformer neural-network architectures.
+During generation, a model uses the prompt and its learned parameters to
+produce likely next tokens (small units of text), one step at a time.
+
+An LLM can be useful for explaining, summarizing, drafting, and answering
+questions about supplied context. It does not inherently know the current
+state of a system, verify that a command works, or guarantee that an answer
+is true. Its knowledge may be incomplete or out of date. Some systems can
+retrieve documents or call tools; those capabilities come from the surrounding
+application and integrations, not from language generation alone.
+
+Common terms:
+- Prompt: the instructions and context provided to a model.
+- Token: a chunk of text processed by the model; it may be a word, part of a
+  word, or punctuation.
+- Context window: the amount of input and conversation the model can consider
+  at one time.
+- Hallucination: generated content that is stated confidently but is
+  unsupported or incorrect.
+
+
+6. Responsible use in DevOps
+----------------------------
+- Give the model relevant, sanitized context rather than secrets or unrelated
+  data.
+- Ask for assumptions and evidence, and verify important claims independently.
+- Test generated scripts and configuration in a safe environment.
+- Review permissions, networking, resource limits, and security implications.
+- Use version control and normal review procedures for generated changes.
+- Keep humans in the approval path for production-impacting actions.
+- Measure outcomes, such as alert precision, time to diagnosis, and rollback
+  rate, rather than relying on a demonstration alone.
+
+
+Key takeaway
+------------
+Predictive and rule-based AI are often useful for detecting patterns and
+estimating what may happen. Generative AI and LLMs are often useful for
+working with language and drafting explanations or artifacts. They can be
+combined, but both require good context, validation, and operational
+guardrails.

@@ -1,0 +1,65 @@
+{
+  "incident": {
+    "id": "demo-incident-001",
+    "service": "checkout-api",
+    "environment": "demo",
+    "summary": "Elevated latency and HTTP 5xx errors"
+  },
+  "timeline": [
+    {
+      "time": "14:00",
+      "event": "Deployment checkout-api version 2.4.1 completed"
+    },
+    {
+      "time": "14:03",
+      "event": "P95 request latency began increasing"
+    },
+    {
+      "time": "14:05",
+      "event": "HTTP 5xx rate exceeded the alert threshold"
+    }
+  ],
+  "metrics": [
+    {
+      "time": "13:55",
+      "p95_latency_ms": 180,
+      "http_5xx_percent": 0.2,
+      "pod_restarts": 0,
+      "database_connections_percent": 54
+    },
+    {
+      "time": "14:05",
+      "p95_latency_ms": 1450,
+      "http_5xx_percent": 8.4,
+      "pod_restarts": 0,
+      "database_connections_percent": 91
+    },
+    {
+      "time": "14:10",
+      "p95_latency_ms": 1680,
+      "http_5xx_percent": 10.1,
+      "pod_restarts": 1,
+      "database_connections_percent": 96
+    }
+  ],
+  "log_samples": [
+    {
+      "time": "14:04:51",
+      "service": "checkout-api",
+      "level": "ERROR",
+      "message": "Request failed while waiting for database connection"
+    },
+    {
+      "time": "14:05:12",
+      "service": "checkout-api",
+      "level": "ERROR",
+      "message": "Database query timed out after 3000ms"
+    },
+    {
+      "time": "14:08:37",
+      "service": "checkout-api",
+      "level": "WARN",
+      "message": "Retry limit reached for order lookup"
+    }
+  ]
+}

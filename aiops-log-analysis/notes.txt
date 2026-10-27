@@ -1,0 +1,140 @@
+AIOPS LOG ANALYSIS: READING THE EXAMPLES
+========================================
+
+Purpose
+-------
+This folder demonstrates two basic ways to inspect timestamped log entries:
+
+- `simple_log_analysis.py` applies a fixed threshold to counts of ERROR-level
+  entries in fixed 30-second time buckets.
+- `aiops_log_analysis.py` uses scikit-learn's Isolation Forest to flag
+  statistical outliers based on severity score and message length.
+
+Neither script uses a large language model (LLM). The first is a
+rule/threshold-based analysis; the second is unsupervised machine learning.
+Both use the sample data in `system_logs.txt`, not live logs.
+
+
+The sample log format
+---------------------
+Each line in `system_logs.txt` is intended to have this format:
+
+  YYYY-MM-DD HH:MM:SS LEVEL message text
+
+For example:
+
+  2025-03-27 10:00:22 INFO Database connection failed
+
+The messages cover database and service issues, resource warnings,
+authentication/security events, and routine activity. They are synthetic
+examples. Some messages do not agree with their assigned level; for example,
+"Query executed successfully" appears with ERROR, and security-related
+messages appear with INFO. This matters because the first script trusts the
+level field and the second gives it a numeric score.
+
+The records are not in chronological order. Both scripts parse timestamps,
+but neither explicitly sorts the final table before printing it. Counting
+time buckets is unaffected by input order, but printed rows remain in the
+original file order.
+
+
+1. `simple_log_analysis.py`
+---------------------------
+This script:
+1. Opens `system_logs.txt` in the current working directory.
+2. Uses a regular expression to parse timestamp, level, and message.
+   Lines that do not match are silently skipped.
+3. Converts timestamps to pandas datetime values.
+4. Selects rows whose level is exactly `ERROR`.
+5. Floors each selected timestamp to a fixed 30-second boundary and counts
+   entries in each bucket.
+6. Prints a warning when a bucket has more than three ERROR entries.
+7. Prints the parsed DataFrame.
+
+Important interpretation:
+- The comment says "in the last 30 seconds," but the code does not calculate
+  a rolling 30-second window. It counts fixed buckets aligned to clock
+  boundaries, such as 10:00:00-10:00:29 and 10:00:30-10:00:59.
+- The threshold is strictly greater than 3, so exactly three entries do not
+  trigger an alert.
+- It counts only entries marked `ERROR`; CRITICAL entries are not included.
+- It reports bucket counts, not the cause or impact of an incident.
+
+Dependencies: pandas. `re` and `collections.Counter` are part of Python's
+standard library.
+
+
+2. `aiops_log_analysis.py`
+--------------------------
+This script:
+1. Opens `system_logs.txt` in the current working directory.
+2. Splits each line into timestamp, level, and the rest of the message. Lines
+   with fewer than four split parts are skipped.
+3. Converts timestamps to pandas datetime values.
+4. Maps INFO, WARNING, ERROR, and CRITICAL to scores 1, 2, 3, and 4.
+5. Adds message length as a second numeric feature.
+6. Fits an Isolation Forest to those two features and labels each row as
+   normal or anomalous.
+7. Prints only rows labeled anomalous.
+
+Isolation Forest is an unsupervised outlier-detection algorithm. In this
+example, it is not trained on confirmed incidents and it does not understand
+the meaning of the log text. Its judgment is based only on severity score and
+character count. A rare combination of level and message length may be
+flagged even when harmless; an important incident may be missed if its two
+features look ordinary.
+
+The `contamination=0.1` setting tells the estimator to expect approximately
+10% of the input rows to be outliers. It is a modeling assumption, not a
+measured incident rate or a confidence that 10% of these logs are genuinely
+bad. The fixed `random_state` makes the example's results repeatable for the
+same input and library behavior.
+
+The script also imports NumPy but does not use it. Every log level must map to
+a numeric score: an unexpected level produces a missing value, which can
+cause model fitting to fail. An empty or very small input may also be
+unsuitable for fitting the estimator.
+
+Dependencies: pandas, NumPy, and scikit-learn. NumPy is currently imported
+but unused; scikit-learn supplies Isolation Forest.
+
+
+Running the examples
+--------------------
+Run commands from this folder because both scripts look for
+`system_logs.txt` relative to the current working directory:
+
+  cd aiops-log-analysis
+  python3 -m venv .venv
+  source .venv/bin/activate
+  python3 -m pip install pandas numpy scikit-learn
+  python3 simple_log_analysis.py
+  python3 aiops_log_analysis.py
+
+These examples require no API key and do not send logs to an external service.
+On Windows, activate the virtual environment with
+`.venv\Scripts\Activate.ps1`.
+
+
+How to use the results responsibly
+----------------------------------
+An anomaly flag is a prompt for investigation, not a diagnosis. Verify it
+against service metrics, traces, deployments, and surrounding log context.
+Check timestamps and severity labels for correctness before drawing
+conclusions. Avoid treating synthetic results as evidence about a real
+system.
+
+For real operations, improve the analysis by validating the input format,
+reporting skipped or invalid records, sorting by timestamp, handling unknown
+levels explicitly, and tuning thresholds or models against representative
+historical data. Add service names, event types, and meaningful measurements
+only when they are reliable and safe to process.
+
+
+Key takeaway
+------------
+The simple script demonstrates fixed-window threshold alerting. The
+Isolation Forest script demonstrates statistical outlier detection. These
+approaches can be useful without an LLM, but their results depend on input
+quality and chosen features. Neither example understands log meaning or
+identifies root cause on its own.

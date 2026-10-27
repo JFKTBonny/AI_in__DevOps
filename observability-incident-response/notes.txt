@@ -1,0 +1,136 @@
+AIOPS, OBSERVABILITY, AND INCIDENT RESPONSE
+==========================================
+
+Purpose
+-------
+This chapter's example demonstrates how AI can assist during a cloud-native
+incident. A structured incident snapshot combines a deployment timeline,
+service metrics, and log samples. A Python program sends this synthetic data
+to a Groq-hosted language model and prints a summary with possible,
+read-only follow-up checks.
+
+The example does not connect to Kubernetes, a monitoring platform, or a
+production service. It does not execute commands or change infrastructure.
+
+
+Three connected concepts
+------------------------
+
+Observability
+~~~~~~~~~~~~~
+Observability is the ability to infer a system's internal condition from
+available evidence. Cloud-native systems commonly produce:
+
+- Metrics: numerical measurements over time, such as request latency, error
+  rates, memory use, and queue depth.
+- Logs: timestamped records of events and errors.
+- Traces: the path and timing of a request as it crosses services.
+- Events: changes such as deployments, pod restarts, scaling, and scheduling.
+
+These signals answer different questions. Metrics can reveal that a service is
+degrading; logs may show the errors occurring; traces can help locate which
+part of a distributed request is slow; deployment events provide change
+context. No single signal necessarily explains the cause.
+
+AIOps
+~~~~~
+AIOps applies machine-learning or generative-AI techniques to operational
+data to help manage its volume and complexity. Examples include grouping
+duplicate alerts, detecting unusual behavior, correlating events, forecasting
+capacity, and summarizing incident evidence.
+
+AIOps is not a guarantee of automatic root-cause analysis or safe autonomous
+remediation. The quality of its output depends on the data, service context,
+and methods used. Correlation can identify events that occurred together,
+but it does not prove that one caused the other.
+
+Incident response
+~~~~~~~~~~~~~~~~~
+Incident response is the organized process of detecting, assessing,
+investigating, mitigating, communicating, and learning from service
+disruptions. AI can support responders by summarizing evidence, proposing
+diagnostic checks, or drafting status updates. The response team remains
+responsible for verification, prioritization, mitigation, and communication.
+
+
+Walkthrough of the sample incident
+----------------------------------
+The included `incident_snapshot.json` describes a fictional checkout API:
+
+- Version 2.4.1 was deployed at 14:00.
+- P95 request latency began rising at 14:03.
+- The HTTP 5xx rate exceeded its alert threshold at 14:05.
+- Database connection usage rose from 54% to 91%, then 96%.
+- Logs include database connection waits, query timeouts, and retry warnings.
+- A pod restart is recorded later in the timeline.
+
+Together, these are useful investigation clues. The timing after a deployment
+and the database-related evidence may justify checking the change and database
+dependency. They do not establish that the deployment caused the incident:
+traffic changes, a database issue, or another dependency could also explain
+some or all of the symptoms. The snapshot lacks traces, full logs, baselines,
+and independent dependency health data.
+
+The triage program asks the model to:
+- Summarize the reported impact and timeline.
+- Distinguish observations from hypotheses.
+- Avoid treating correlation as proof of causation.
+- Suggest safe, read-only investigative checks.
+- Avoid claiming it has accessed a cluster or recommending state-changing
+  commands.
+
+The response is a starting point for a responder, not an incident verdict.
+
+
+Running the demonstration
+-------------------------
+The program uses Python's standard library and requires a Groq API key and
+network access. From this directory:
+
+  export GROQ_API_KEY="your-api-key"
+  python3 triage_incident.py
+
+Optionally choose a model available to the account:
+
+  export GROQ_MODEL="your-available-model"
+
+To analyze another JSON snapshot:
+
+  python3 triage_incident.py path/to/incident.json
+
+The script reads the local JSON file and sends its contents to the Groq API.
+Use only data that your organization's policies permit sharing with an
+external service. Do not include credentials, customer information, or
+confidential logs in a real snapshot without appropriate authorization.
+
+
+From a demo to a real observability workflow
+--------------------------------------------
+A production integration would need to retrieve telemetry from approved
+sources, attach timestamps and service/environment identifiers, and limit the
+data to what responders need. It should preserve links to the original
+metrics, logs, traces, and deployment records so people can verify every
+summary. It should also handle missing, delayed, duplicated, or conflicting
+signals explicitly.
+
+Before relying on AI output, ask:
+- What data supports this statement?
+- What information is missing?
+- Is this an observation, a hypothesis, or a recommendation?
+- Can the recommendation be checked safely?
+- Does the proposed action follow the incident process and approval policy?
+
+For any system that may eventually take action, use strong access controls,
+explicitly approved operations, audit logging, human review for consequential
+changes, and a tested rollback plan. Do not pipe model output directly into a
+shell, `kubectl`, or a cloud CLI.
+
+
+Key takeaway
+------------
+Observability supplies the evidence; AIOps can help organize and interpret
+that evidence; incident response uses verified evidence to guide action.
+AI can shorten the path to useful questions, but it cannot turn incomplete
+signals into certain causation. Keep the analysis reviewable, protect
+operational data, and leave consequential decisions within the established
+incident process.

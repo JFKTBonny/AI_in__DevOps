@@ -1,0 +1,113 @@
+AI AGENTS FOR DEVOPS: CI FAILURE TRIAGE
+=======================================
+
+What is an AI agent?
+--------------------
+An AI agent is a program that uses a model to decide what step to take toward
+a goal. Unlike a single prompt-and-response interaction, an agent can use
+tools, examine their results, and decide whether it needs another step before
+returning an answer.
+
+In this example, the goal is to investigate a CI failure using a local build
+log. The model can request a summary or search for a useful term, receive the
+tool result, and use that evidence to produce a triage report. This repeated
+model/tool interaction is the agent loop.
+
+The model does not itself read arbitrary files or run shell commands. The
+Python program exposes the tools and enforces what they can do.
+
+
+Files in this example
+---------------------
+- `ci_triage_agent.py`: implements a bounded agent loop and two read-only
+  tools.
+- `sample_ci.txt`: synthetic CI output with a failing coupon test.
+- `README.md`: setup and run instructions.
+
+
+What the agent can do
+--------------------
+The agent has exactly two tools:
+
+1. `get_job_summary` counts common words such as "failed", "passed", "error",
+   and "success" and returns the log's line count.
+2. `search_ci_log` searches for a literal, case-insensitive term and returns
+   matching line numbers and text.
+
+The agent may choose a search term after seeing the initial tool result. For
+example, it might summarize the job, search for "FAILURES", and then search
+for the failing test name. The tool loop is limited to six calls. Each search
+returns at most 30 matches, and matching lines are truncated to 500
+characters.
+
+In the provided sample, the log shows that one test failed:
+`test_rejects_expired_coupon`. The assertion expected
+`COUPON_EXPIRED`, but received `INVALID_COUPON`. This is an observed mismatch
+from the log. The underlying code defect is not established because the agent
+does not inspect source code.
+
+
+What makes this agentic?
+-----------------------
+The workflow is more than asking an LLM to summarize a complete log in one
+request:
+
+1. A person supplies a goal and a log file.
+2. The model decides whether the available tools would help.
+3. The program runs only the requested, allowlisted read-only tool.
+4. The model receives the result and may request another permitted tool.
+5. The model returns a report with facts, hypotheses, and suggested checks.
+
+The model plans which evidence to request, while the Python tool layer
+restricts its capabilities. The bounded loop prevents unending tool use.
+
+
+Run the example
+---------------
+The script uses Python's standard library. It requires a Groq API key and
+network access. From this directory:
+
+  export GROQ_API_KEY="your-api-key"
+  python3 ci_triage_agent.py
+
+To inspect a different local log:
+
+  python3 ci_triage_agent.py path/to/ci.log
+
+The default model is `llama-3.3-70b-versatile`. To choose a different model
+available to the account:
+
+  export GROQ_MODEL="your-available-model"
+
+The script refuses log files larger than 1 MB. It sends the tool results,
+including matching log excerpts, to the Groq API. Do not analyze confidential
+logs or secrets unless your organization's policy permits external
+processing.
+
+
+Limitations and safe operation
+------------------------------
+- The model can misunderstand log messages or suggest an incorrect cause.
+- The sample tool only searches text; it does not understand test semantics.
+- A log can contain misleading text or prompt-injection attempts. Treat log
+  data as untrusted and keep tools narrowly scoped.
+- Search results sent to the hosted model may contain sensitive information.
+  Sanitize logs and follow data-handling policy.
+- The agent cannot prove a code-level root cause because it has no source-code
+  or CI-platform access.
+- The tools cannot edit files, run commands, retry jobs, or deploy. Keep those
+  capabilities out of an initial learning example.
+
+Treat the report as a triage aid. Verify its cited evidence in the original CI
+output and inspect relevant code and test history using normal review
+procedures. If building a more capable agent, add tools one at a time, enforce
+allowlists and least privilege outside the model, log tool actions, bound
+iterations, and require human approval for changes with operational impact.
+
+
+Key takeaway
+------------
+An agent can use a model to select and sequence safe tools, then summarize
+what those tools found. In DevOps, this can speed up repetitive investigation.
+The agent's authority comes from the tools it is given, so keep those tools
+limited, read-only, auditable, and subject to human verification.

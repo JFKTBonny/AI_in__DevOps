@@ -1,0 +1,76 @@
+AI FOR DEVOPS SECURITY AND FINOPS
+================================
+
+Purpose
+-------
+AI can help DevOps teams interpret security scan results and cloud cost data.
+It can summarize evidence, highlight items for investigation, and suggest
+checks. It does not replace security tools, cost controls, or engineer
+judgment.
+
+Practical example: CI report triage
+-----------------------------------
+A CI pipeline produces a dependency scan report, and a cloud cost export
+shows usage for the team's test environment. A small assistant reads these
+reports and writes a triage note for an engineer.
+
+Example dependency scan input:
+
+  Service: checkout-api
+  Package: example-lib 1.4
+  Severity: HIGH
+  Fix available: example-lib 1.6
+  Used by: production service
+
+Example cloud cost input:
+
+  Resource: test-runner-03
+  Environment: test
+  Cost this month: $82
+  Previous month: $24
+  Status: running
+
+Example assistant output:
+
+  Security: The scan reports a high-severity finding for a dependency used by
+  checkout-api and lists version 1.6 as a possible fix. Confirm that the
+  deployed version is affected, review the advisory, and test the upgrade in
+  CI before following the team's patch process.
+
+  Cost: test-runner-03 costs $82 this month, up from $24 last month. Confirm
+  that it is still needed and review its usage before considering a resize or
+  shutdown.
+
+  Actions taken: None. These are recommendations based on the supplied
+  reports.
+
+How to build a first version
+----------------------------
+1. Use synthetic or sanitized scanner output and a small cloud-cost CSV.
+2. Parse the reports into a consistent format, preserving source and date.
+3. Give the assistant only the evidence needed to summarize and prioritize.
+4. Ask it to separate observed facts from hypotheses and recommendations.
+5. Require source references in the generated triage note.
+6. Have an engineer verify the results and decide whether to take action.
+
+Safe operation
+--------------
+- Do not send secrets, customer information, or sensitive infrastructure
+  details to an unapproved model.
+- Treat model output as a triage aid; verify findings against the original
+  scanner report, advisory, and cost data.
+- A severity label alone does not establish exploitability or business
+  impact. Check the affected version, service context, and applicable
+  security guidance.
+- A cost increase does not prove that a resource is idle or safe to remove.
+  Check ownership, workload, and usage first.
+- Keep the initial assistant read-only. Do not let it patch dependencies,
+  stop resources, change policies, or deploy.
+- Require the normal review and approval process for security or
+  infrastructure changes.
+
+Key takeaway
+------------
+AI can make security and cost reports easier to review by summarizing,
+prioritizing, and suggesting verification steps. Engineers remain responsible
+for validating the evidence and approving any changes.

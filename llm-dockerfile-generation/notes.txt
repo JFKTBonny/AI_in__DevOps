@@ -1,0 +1,100 @@
+LLM-POWERED DOCKERFILE GENERATION
+=================================
+
+Purpose
+-------
+This chapter demonstrates two ways to ask a language model to draft a
+Dockerfile:
+
+- Ollama runs a model locally and exposes a local chat API.
+- Gemini sends a prompt to Google's hosted Gemini API.
+
+Both scripts prompt for a programming language, submit a request, and print
+the generated Dockerfile. They do not create a file, build an image, inspect
+your project, or verify that the generated instructions work.
+
+
+How the generators work
+-----------------------
+Each script has a prompt that describes the requested output: a base image,
+dependency installation, working directory, source files, and startup
+command. The selected model generates text based on that prompt and the
+language name supplied by the user.
+
+The Ollama script uses the local model `llama3.2:1b`, which must be installed
+and available to the local Ollama service. The Gemini script uses
+`gemini-2.5-flash` by default and reads its API key from `GEMINI_API_KEY`.
+The Gemini model can be changed with the `GEMINI_MODEL` environment variable.
+Model names and availability can change; choose a model supported by the
+service and account in use.
+
+The Ollama model runs locally, but the Gemini script sends its prompt to a
+hosted service. Do not put secrets, private source code, or sensitive
+infrastructure details in prompts unless policy permits it.
+
+
+Running the examples
+--------------------
+From this directory, create and activate a virtual environment, then install
+the dependencies:
+
+  python3 -m venv .venv
+  source .venv/bin/activate
+  python3 -m pip install -r requirements.txt
+
+Run the local version after starting Ollama and pulling the model:
+
+  ollama serve
+  ollama pull llama3.2:1b
+  python3 generate_dockerfile_ollama.py
+
+Run the hosted Gemini version after setting an API key:
+
+  export GEMINI_API_KEY="your-api-key"
+  python3 generate_dockerfile_gemini.py
+
+On Windows, activate the virtual environment with
+`.venv\Scripts\Activate.ps1` and set environment variables in PowerShell, for
+example:
+
+  $env:GEMINI_API_KEY = "your-api-key"
+
+Never put a real API key in source control. If a key is accidentally exposed,
+revoke it and create a replacement.
+
+
+Reviewing generated Dockerfiles
+-------------------------------
+An LLM does not know your repository structure unless you provide that
+context. A language name alone may not specify the application entry point,
+dependency manager, build process, port, or runtime version. The output may
+therefore need substantial adjustment.
+
+Before using a generated Dockerfile, check:
+- The base image and version are supported and appropriate.
+- Dependency installation uses the correct lockfile and reproducible versions.
+- Only required source files are copied; use a suitable `.dockerignore`.
+- Build tools and runtime dependencies are handled appropriately.
+- The process runs as a non-root user where practical.
+- Secrets are not copied into image layers or build arguments.
+- Exposed ports, health checks, and startup commands match the application.
+- File ownership and permissions support the runtime user.
+
+Build and test the image locally, inspect its behavior, and scan it according
+to your project's policy. Treat the model's output as an unverified draft, not
+as a security review or production-ready artifact.
+
+
+Prompting improvements
+----------------------
+For more useful Dockerfiles, include concrete project context in the prompt:
+- Language and runtime version.
+- Framework and dependency manager.
+- Build and start commands.
+- Required files and listening port.
+- Whether a multi-stage build is appropriate.
+- Target platform and security requirements.
+- Desired output format and any constraints.
+
+Do not include credentials or other secrets in this context. Review every
+generated command before executing it.

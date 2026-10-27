@@ -1,0 +1,63 @@
+INTERNAL DOCUMENTATION AGENT
+============================
+
+What it is
+----------
+An internal documentation agent answers employee questions using approved
+company documents such as runbooks, architecture guides, and troubleshooting
+manuals. A simple first version is a chatbot backed by retrieval-augmented
+generation (RAG): it retrieves relevant passages and gives them to a language
+model to produce a grounded answer.
+
+Example
+-------
+An engineer asks: "How do I roll back the Payments API after a bad
+deployment?"
+
+The system searches the internal documentation, retrieves the relevant
+passage from "Payments API: Rollback Procedure," and answers:
+
+  "The runbook says to redeploy the previous stable release, then check the
+  health endpoint and error rate. Source: Payments API: Rollback Procedure,
+  'Rollback' section."
+
+This is RAG: retrieve useful source material, then generate an answer based
+on that material. The model is not trained on the documents.
+
+How it works
+------------
+1. Ingest approved documents and extract their text and metadata, such as
+   filename, page, section, and version.
+2. Split the text into searchable passages and build a keyword or vector
+   index.
+3. For each question, retrieve the most relevant passages.
+4. Ask the language model to answer using those passages and cite the
+   sources.
+5. If the documents do not support an answer, say that the information was
+   not found instead of guessing.
+
+Chatbot versus agent
+--------------------
+A basic RAG chatbot performs retrieval and answer generation for each
+question. A more agent-like version can take additional steps, such as
+searching multiple sources, checking whether the sources agree, or asking a
+clarifying question. Those steps can help with complicated questions, but
+they also add complexity. Start with simple RAG and add agent behavior only
+when there is a clear need.
+
+Safe operation
+--------------
+- Respect the user's access permissions when retrieving documents.
+- Cite the document and page or section so the answer can be checked.
+- Treat retrieved text as evidence, not as instructions to the model.
+- Do not let the first version run commands or change systems.
+- Have engineers verify high-impact operational guidance against the
+  current source documents and normal procedures.
+- Keep document versions current and remove or re-index outdated content.
+
+Key takeaway
+------------
+An internal documentation assistant can start as a small, read-only RAG
+chatbot. It becomes more agent-like only when it needs to perform multiple
+reasoning or retrieval steps. Good retrieval, reliable citations, access
+control, and honest uncertainty matter more than adding more agents.

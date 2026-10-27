@@ -1,0 +1,133 @@
+AI-ASSISTED SHELL SCRIPTING FOR DEVOPS
+======================================
+
+Purpose
+-------
+This example demonstrates AI in the operational use of a Bash script. The
+script gathers a small set of read-only Linux health metrics, sends those
+metrics to the Groq API, and displays an AI-generated summary with possible
+read-only follow-up checks.
+
+The script is the dependable data-collection and API-calling mechanism. The
+AI's role is to interpret a snapshot and help an operator orient themselves.
+The model does not inspect the machine directly, establish a root cause, or
+make changes. The operator remains responsible for verifying the summary and
+choosing what to do.
+
+
+What the example collects
+-------------------------
+The `ai_health_check.sh` script collects:
+- System uptime.
+- One-, five-, and fifteen-minute load averages.
+- Number of available CPU cores.
+- Total, used, and available memory.
+- Total, used, available, and percentage-used space on the root filesystem.
+- Optionally, the active state of one systemd service specified with
+  `--service`.
+
+The script sends this structured metrics snapshot to Groq. It does not
+intentionally collect system logs, environment variables, or credentials.
+However, host metrics and service names can still be operationally sensitive.
+Check organizational policy before sending them to an external API.
+
+
+How this differs from a normal health-check script
+--------------------------------------------------
+A conventional script can apply fixed rules, such as warning when a disk is
+over a chosen usage percentage. Such checks are fast and predictable, but
+they do not necessarily explain how several signals relate or which checks
+an operator might perform next.
+
+In this example, a language model receives uptime, load, memory, filesystem,
+and optional service state together. It can summarize the snapshot in natural
+language and suggest relevant read-only investigations. This may help during
+initial triage, especially for an operator unfamiliar with a system.
+
+AI output is not inherently more accurate than a rule or monitoring alert.
+The model may misunderstand the measurements, overlook important context, or
+state an unsupported explanation. A snapshot also cannot show trends, process
+ownership, application logs, recent deployments, or dependency health unless
+that additional information is deliberately collected and supplied.
+
+
+Workflow
+--------
+1. The shell script checks its arguments, platform, required commands, and
+   presence of `GROQ_API_KEY`.
+2. It reads host metrics using local read-only commands.
+3. It constructs a JSON object and a prompt that asks for a cautious summary
+   and safe read-only follow-up checks.
+4. It sends the request to the Groq Chat Completions API using `curl`.
+5. It prints the metrics and the model response for the operator to assess.
+
+The model is instructed not to claim a root cause based only on the supplied
+metrics and not to recommend commands that change system state. Prompt
+instructions reduce risk but are not an enforcement boundary; review all
+output.
+
+
+Running the example
+-------------------
+Requirements are Linux, Bash, `curl`, `jq`, `awk`, `df`, `free`, `getconf`,
+`uptime`, and a Groq API key. `systemctl` is also required when using the
+optional service check.
+
+Set the key in the environment, not in the script:
+
+  export GROQ_API_KEY="your-api-key"
+
+Run a general health check:
+
+  ./ai_health_check.sh
+
+Include a systemd service state:
+
+  ./ai_health_check.sh --service nginx
+
+The default model is `llama-3.3-70b-versatile`. If needed, select a model
+available to the account:
+
+  export GROQ_MODEL="your-available-model"
+
+Use `./ai_health_check.sh --help` to see available options. Never commit an
+API key or expose it in terminal recordings, logs, or shared shell history.
+
+
+Interpreting results
+--------------------
+Treat the AI summary as a triage aid, not a health verdict. Verify suggested
+concerns with the host's monitoring and authoritative tools. For example:
+- Compare load average with CPU core count and inspect CPU utilization over
+  time; load can include tasks waiting for I/O and is not CPU percentage.
+- Compare memory usage with available memory and check for pressure or
+  swapping; "used" memory alone can be misleading on Linux.
+- Investigate filesystem capacity and inode usage; this example reports
+  capacity, not inode exhaustion.
+- Check service logs and recent deployment history when a service is not
+  active; the service state alone does not explain why.
+
+These checks should be adapted to the actual operating system and service.
+Do not copy a proposed command into production without understanding its
+effects.
+
+
+Safety and privacy
+------------------
+- The example collects metrics and makes an outbound API request. It does not
+  run model-generated shell commands.
+- Keep credentials out of prompts and source code.
+- Confirm that sending operational metrics to a hosted model is permitted.
+- Do not use AI output as authorization to restart services, delete files,
+  change firewall rules, or deploy code.
+- For any future automation that performs changes, use explicit allowlists,
+  least-privilege credentials, human approval, audit logs, and a tested
+  rollback path.
+
+
+Key takeaway
+------------
+AI can affect how an operational script is used by interpreting its collected
+data and helping a person decide what to investigate next. Keep deterministic
+collection and control in the script, use the model for cautious explanation,
+and leave consequential decisions and actions under human control.
